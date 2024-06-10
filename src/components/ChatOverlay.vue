@@ -3,12 +3,46 @@
 import { onMounted, onUnmounted, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import tmi from 'tmi.js'
+import type { IChatMessage } from '@/types';
 
-const chatProps = defineProps(["channelId"])
+const chatProps = defineProps<{
+  channelId: string;
+  chatDemo: boolean;
+}>();
 
 const clientTwitch = ref();
 const isConnected = ref(false);
 const chatMessages: any = ref([]);
+
+const chatExample: IChatMessage[] = [
+  {
+    "display-name": "moltenb",
+    message: "That move was POG",
+    color: "#CF3400"
+  },
+  {
+    "display-name": "GodOfHuskies",
+    message: "He can still win this one",
+    color: "#CEC400"
+  },
+  {
+    "display-name": "Stauswave",
+    message: "Pog",
+    color: "#000000"
+  },
+  {
+    "display-name": "Stauswave",
+    message: "Its happening guys",
+    color: "#FF4500"
+  },
+  {
+    "display-name": "Pog",
+    message: "yea that's life",
+    color: "#CEC100"
+  },
+]
+
+let currentIndex = 0;
 
 const connectToTwitchChat = (chanelName: string) => {
   clientTwitch.value = new tmi.Client({
@@ -27,7 +61,6 @@ const connectToTwitchChat = (chanelName: string) => {
   clientTwitch.value.on('message', (wat: any, tags: any, message: any, self: any) => {
     if (self) return;
 
-    console.log("MESSAGE", message);
     messageFormat(tags, message);
   });
 }
@@ -35,12 +68,14 @@ const connectToTwitchChat = (chanelName: string) => {
 const messageFormat = (tags: any, message: any) => {
 
   const badges = tags.badges || {};
-  const isBroadcaster = badges.broadcaster;
-  const isMod = badges.moderator;
-  const isVip = badges.vip;
+  // const isBroadcaster = badges.broadcaster;
+  // const isMod = badges.moderator;
+  // const isVip = badges.vip;
 
 
   chatMessages.value.push({ ...tags, message });
+  console.log("MESAGES", chatMessages.value);
+
   // nextTick(() => {
   //     scrollToBottom();
   // });
@@ -50,10 +85,25 @@ const messageFormat = (tags: any, message: any) => {
 onMounted(async () => {
   if (chatProps.channelId) {
     console.log("CHANNEL ID: ", chatProps.channelId);
-    connectToTwitchChat(chatProps.channelId)
-
+    await connectToTwitchChat(chatProps?.channelId)
   }
+
+  if (chatProps.chatDemo) {
+    loadMessageDemo()
+  }
+
 });
+
+const loadMessageDemo = () => {
+  setInterval(() => {
+    chatMessages.value.push(chatExample[currentIndex]);
+    currentIndex = (currentIndex + 1) % chatExample.length;
+    if (chatMessages.value.length > 50) {
+      chatMessages.value = [];
+    }
+  }, 3000);
+}
+
 
 onUnmounted(async () => {
   if (clientTwitch.value) {
