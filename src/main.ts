@@ -1,19 +1,31 @@
-import "./assets/main.css";
+import "./assets/main.scss";
 
 import { createApp } from "vue";
 import { createPinia } from "pinia";
 
 import App from "./App.vue";
 import router from "./router";
-import PrimeVue from "primevue/config";
 
 const app = createApp(App);
 
-app.use(createPinia());
-app.use(router);
+const pinia = createPinia();
 
-app.use(PrimeVue, {
-	unstyled: true,
+// Plugins call
+const plugins = ["prime"] as const;
+
+Promise.all(
+	plugins.map(async (plugin) => {
+		const { default: defaultImport } = await import(`./plugins/${plugin}.ts`);
+
+		const fn = defaultImport || (() => Promise.resolve(undefined));
+
+		return fn({ app, pinia, router });
+	})
+).finally(() => {
+	// Default plugins use
+	app.use(pinia);
+
+	app.use(router);
+
+	app.mount("#app");
 });
-
-app.mount("#app");

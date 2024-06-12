@@ -1,19 +1,24 @@
 <script lang="ts" setup>
 
-import { onMounted, onUnmounted, ref } from 'vue';
-import { useRoute } from 'vue-router';
+import { onMounted, onUnmounted, onUpdated, ref } from 'vue';
 import tmi from 'tmi.js'
 import type { IChatMessage } from '@/types';
 
 const chatProps = defineProps<{
   channelId: string;
   chatDemo: boolean;
+  wrapper: boolean,
+  style: {
+    backgroundColor: string;
+    textColor: string;
+    fontSize: number;
+  }
 }>();
 
 const clientTwitch = ref();
 const isConnected = ref(false);
 const chatMessages: any = ref([]);
-
+const limitMessges = ref(50);
 const chatExample: IChatMessage[] = [
   {
     "display-name": "moltenb",
@@ -65,6 +70,8 @@ const connectToTwitchChat = (chanelName: string) => {
   });
 }
 
+const chatContainer = ref();
+
 const messageFormat = (tags: any, message: any) => {
 
   const badges = tags.badges || {};
@@ -83,12 +90,14 @@ const messageFormat = (tags: any, message: any) => {
 };
 
 onMounted(async () => {
+  console.log("PROPS", chatProps);
   if (chatProps.channelId) {
     console.log("CHANNEL ID: ", chatProps.channelId);
     await connectToTwitchChat(chatProps?.channelId)
   }
 
   if (chatProps.chatDemo) {
+    limitMessges.value = 3
     loadMessageDemo()
   }
 
@@ -98,12 +107,14 @@ const loadMessageDemo = () => {
   setInterval(() => {
     chatMessages.value.push(chatExample[currentIndex]);
     currentIndex = (currentIndex + 1) % chatExample.length;
-    if (chatMessages.value.length > 50) {
-      chatMessages.value = [];
-    }
   }, 3000);
 }
 
+onUpdated(() => {
+  if (chatContainer.value) {
+    chatContainer.value.scrollTop = chatContainer.value.scrollHeight;
+  }
+});
 
 onUnmounted(async () => {
   if (clientTwitch.value) {
@@ -120,14 +131,16 @@ const icons = {
 </script>
 
 <template>
-  <div id="log">
+  <div id="log" :style="wrapper ? 'position: relative; top: 0;' : ''" class="chat-overlay" ref="chatContainer">
     <div v-for="(chatMessage, index) in chatMessages" :key="index"
       :class="[index % 2 === 0 ? 'border-blue-500' : 'border-red-500', '']">
 
-      <span class="meta" :style="{ color: chatMessage.color ? chatMessage.color : '#cecece' }">
+      <span class="meta"
+        :style="{ color: chatMessage.color ? chatMessage.color : '#cecece', background: chatProps?.style?.backgroundColor ? `#${chatProps?.style?.backgroundColor}` : '#fff' }">
         <span class="badges">
         </span>
-        <span class="name">{{ chatMessage['display-name'] }}: </span>
+        <span class="name" :style="{ fontSize: `${chatProps.style.fontSize}px` }">{{ chatMessage['display-name'] }}:
+        </span>
       </span>
 
       <span class="message">
@@ -206,7 +219,14 @@ body {
   padding-bottom: 0.1em;
 }
 
+.chat-overlay {
+  max-height: 255px;
+  overflow: hidden;
+  padding: 10px;
+}
+
 #log .meta {
+  display: inline-block;
   position: relative;
   top: 10px;
   display: inline;
@@ -221,6 +241,7 @@ body {
 }
 
 #log .message {
+  margin-left: 5px;
   color: #fff;
   padding: 1em 1em 0.8em 0.8em;
   border-radius: 15px;
@@ -240,5 +261,6 @@ body {
 
 .name {
   margin-left: 0.2em;
+  font-weight: bold;
 }
 </style>
